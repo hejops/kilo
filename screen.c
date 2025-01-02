@@ -2,12 +2,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
-struct EDITOR {  // struct declaration and initialisation
-
+struct EDITOR {                 // struct declaration and initialisation
   struct termios termios_mode;  // https://www.mankier.com/3/termios
   int rows;
   int columns;
