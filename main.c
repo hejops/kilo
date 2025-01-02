@@ -12,8 +12,8 @@ int main(void) {
   clear_screen();
 
   while (1) {
-    char c = read_key();
-    handle_key(c);
+    char key = read_key();
+    handle_key(key);
   };
 
   return EXIT_SUCCESS;

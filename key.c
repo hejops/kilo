@@ -22,11 +22,11 @@ const int DEBUG = 0;
 
 // read a single key (byte) and return it
 char read_key(void) { /* {{{ */
-  char c;
+  char key = '\0';
 
   // read stdin, 1 char (byte) at a time (as configured in VMIN), every 0.1 s
   // (as configured in VTIME)
-  if (read(STDIN_FILENO, &c, 1) == -1
+  if (read(STDIN_FILENO, &key, 1) == -1
       // we don't care about Cygwin
       // && errno != EAGAIN
   ) {
@@ -34,20 +34,20 @@ char read_key(void) { /* {{{ */
   };
 
   if (DEBUG) {
-    if (iscntrl(c)) {
+    if (iscntrl(key)) {
       // escape sequences comprise 2 or more bytes
       // some bytes (e.g. 27 (Esc)) do not have a meaningful char representation
-      printf("%d\r\n", c);
+      printf("%d\r\n", key);
     } else {
-      printf("%d (%c)\r\n", c, c);
+      printf("%d (%c)\r\n", key, key);
     }
   }
 
-  return c;
+  return key;
 } /* }}} */
 
-void handle_key(char c) {
-  switch (c) {
+void handle_key(char key) {
+  switch (key) {
       // c-q closes the window in my window manager
     case KEY_QUIT:
       printf("exited\n");

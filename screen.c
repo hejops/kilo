@@ -12,8 +12,7 @@ struct EDITOR {                 // struct declaration and initialisation
 } EDITOR;
 
 void draw_rows(void) {
-  int row;
-  for (row = 0; row <= EDITOR.rows; row++) {
+  for (int row = 0; row < EDITOR.rows; row++) {
     write(STDOUT_FILENO, "~\r\n", 3);
   }
 }
@@ -159,6 +158,10 @@ void set_window_dimensions(struct EDITOR* e) {
       break;
     }
   }
+
+  // note: sscanf is marked as unsafe. sscanf_s is microsoft-specific. strtol is
+  // probably the way to go, but this may involve strtok
+  // https://stackoverflow.com/a/9245829
 
   // indexing a string with &s[n] (located at mem addr x) retrieves the
   // substring starting at mem addr x+n, and ending at the null byte.
