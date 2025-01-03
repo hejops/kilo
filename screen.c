@@ -6,7 +6,10 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "buffer.c"
 #include "util.c"
+
+// for consistency, we only use the word 'screen', not 'window', or 'editor'.
 
 struct SCREEN {  // struct declaration and initialisation
   // note: fields can be declared as immutable, but we don't do this, simply to
@@ -22,28 +25,42 @@ struct SCREEN {  // struct declaration and initialisation
   int columns;
 } SCREEN;
 
-void draw_rows(int n) {
-  for (int row = 0; row < n; row++) {
-    write(STDOUT_FILENO, "~\r\n", 3);
+void draw_rows(int n, struct STRING_BUFFER* b) {
+  for (int row = 0; row < n - 1; row++) {
+    buf_append(b, "~\r\n", 3);
   }
+  buf_append(b, "~", 1);
 }
 
 void clear_screen(struct SCREEN* s) {
+  struct STRING_BUFFER buf = {.contents = NULL, .length = 0};
+
+  // // C always returns a copy, never a move
+  // struct STRING_BUFFER buf = buf_new();
+  // printf("%p ", &buf);
+
+  // note: there is no way to check whether a var has been initialised (without
+  // segfaulting)
+  // https://stackoverflow.com/a/36490974
+
   // \x1b = 27 = Esc
 
   // [2J = erase all lines
   // https://vt100.net/docs/vt100-ug/chapter3.html#ED
   // if n < len(string), probably UB
-  write(STDOUT_FILENO, "\x1b[2J", 4);
+  buf_append(&buf, "\x1b[2J", 4);
 
   // [row;colH = place cursor at row,col
   // with no args, row=col=1 (1-indexed)
   // https://vt100.net/docs/vt100-ug/chapter3.html#CUP
-  write(STDOUT_FILENO, "\x1b[H", 3);
+  buf_append(&buf, "\x1b[H", 3);
 
-  draw_rows(s->rows);
+  draw_rows(s->rows, &buf);
 
-  write(STDOUT_FILENO, "\x1b[H", 3);  // move cursor back to home
+  buf_append(&buf, "\x1b[H", 3);  // move cursor back to home
+
+  buf_write(&buf);
+  buf_free(&buf);
 }
 
 // restore the initial state of termios on exit. this prevents the user from
@@ -59,15 +76,15 @@ void disable_raw_mode(void) {
   };
 }
 
-void enable_raw_mode(struct SCREEN* s) { /* {{{ */
+void enable_raw_mode(struct SCREEN* scr) { /* {{{ */
   // fails if stdin is passed to the program, or if a file descriptor is passed
   // (./main <main.c)
-  if (tcgetattr(STDIN_FILENO, &s->termios_mode) == -1) {
+  if (tcgetattr(STDIN_FILENO, &scr->termios_mode) == -1) {
     panic("tcgetattr");
   };
   atexit(disable_raw_mode);  // defer-ish
 
-  struct termios raw = s->termios_mode;  // assignment without ptr = copy
+  struct termios raw = scr->termios_mode;  // assignment without ptr = copy
 
   // note: terminal bindings still intercept stdin
 
@@ -129,14 +146,14 @@ void enable_raw_mode(struct SCREEN* s) { /* {{{ */
 
 } /* }}} */
 
-void set_dimensions(struct SCREEN* s) { /* {{{ */
-  struct winsize ws;
+void set_dimensions(struct SCREEN* scr) { /* {{{ */
+  struct winsize wsz;
   // note: TIOCGWINSZ is indirectly included via asm/termbits.h
   // https://man.archlinux.org/man/core/man-pages/TIOCGWINSZ.2const.en
   // https://stackoverflow.com/q/67098208
-  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != -1 && ws.ws_col > 0) {
-    s->rows = ws.ws_row;
-    s->columns = ws.ws_col;
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &wsz) != -1 && wsz.ws_col > 0) {
+    scr->rows = wsz.ws_row;
+    scr->columns = wsz.ws_col;
     return;
   }
 
@@ -167,7 +184,7 @@ void set_dimensions(struct SCREEN* s) { /* {{{ */
 
   // indexing a string with &s[n] (located at mem addr x) retrieves the
   // substring starting at mem addr x+n, and ending at the null byte.
-  if (sscanf(&buf[2], "%d;%d", &(s->rows), &(s->columns)) == -1) {
+  if (sscanf(&buf[2], "%d;%d", &(scr->rows), &(scr->columns)) == -1) {
     panic("sscanf cursor position");
   };
 } /* }}} */
