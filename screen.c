@@ -1,27 +1,16 @@
+// for consistency, we only use the word 'screen', not 'window', or 'editor'.
+
+#include "screen.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
-#include "buffer.h"
 #include "util.h"
 
-// for consistency, we only use the word 'screen', not 'window', or 'editor'.
-
-struct SCREEN {  // struct declaration and initialisation
-  // note: fields can be declared as immutable, but we don't do this, simply to
-  // satisfy compiler
-
-  // the initial state of termios. this is never modified: enable_raw_mode
-  // makes a copy of this and modifies it to set the editor state, while
-  // disable_raw_mode simply reverts to this state.
-  // https://www.mankier.com/3/termios
-  struct termios termios_mode;
-
-  int rows;
-  int columns;
-} SCREEN;
+struct SCREEN SCREEN;  // init global var. the header must re-export this.
 
 void draw_rows(int n, struct STRING_BUFFER* buf) {
   for (int row = 0; row < n - 1; row++) {

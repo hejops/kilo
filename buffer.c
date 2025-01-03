@@ -1,12 +1,9 @@
+#include "buffer.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-struct STRING_BUFFER {
-  char* contents;
-  int length;
-};
 
 struct STRING_BUFFER buf_new(void) {
   // C always returns a copy, never a move
