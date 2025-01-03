@@ -7,7 +7,7 @@
 
 #include "screen.c"
 
-// switch/case only accepts compile-time constants
+// switch/case only accepts compile-time constants, so macro is required
 // char mod_ctrl(char c) { return c & 0x1f; }
 //
 // 0x1f = 0b0001_1111
@@ -18,10 +18,10 @@
 
 #define KEY_QUIT mod_ctrl('x')
 
-const int DEBUG = 0;
-
 // read a single key (byte) and return it
 char read_key(void) { /* {{{ */
+  const int DEBUG = 0;
+
   char key = '\0';
 
   // read stdin, 1 char (byte) at a time (as configured in VMIN), every 0.1 s

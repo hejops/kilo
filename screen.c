@@ -2,22 +2,33 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
-struct EDITOR {                 // struct declaration and initialisation
-  struct termios termios_mode;  // https://www.mankier.com/3/termios
+#include "util.c"
+
+struct SCREEN {  // struct declaration and initialisation
+  // note: fields can be declared as immutable, but we don't do this, simply to
+  // satisfy compiler
+
+  // the initial state of termios. this is never modified: enable_raw_mode
+  // makes a copy of this and modifies it to set the editor state, while
+  // disable_raw_mode simply reverts to this state.
+  // https://www.mankier.com/3/termios
+  struct termios termios_mode;
+
   int rows;
   int columns;
-} EDITOR;
+} SCREEN;
 
-void draw_rows(void) {
-  for (int row = 0; row < EDITOR.rows; row++) {
+void draw_rows(int n) {
+  for (int row = 0; row < n; row++) {
     write(STDOUT_FILENO, "~\r\n", 3);
   }
 }
 
-void clear_screen(void) {
+void clear_screen(struct SCREEN* s) {
   // \x1b = 27 = Esc
 
   // [2J = erase all lines
@@ -30,46 +41,33 @@ void clear_screen(void) {
   // https://vt100.net/docs/vt100-ug/chapter3.html#CUP
   write(STDOUT_FILENO, "\x1b[H", 3);
 
-  draw_rows();
+  draw_rows(s->rows);
 
   write(STDOUT_FILENO, "\x1b[H", 3);  // move cursor back to home
 }
 
-// clear the screen, raise error, and exit. fallible stdlib functions always
-// return an int (-1) on failure
-void panic(const char* msg) {
-  // const is not required, but it indicates that the string is readonly
-
-  clear_screen();
-
-  // perror vs fprintf: https://stackoverflow.com/a/12102357
-  // perror relies on global `errno` variable (defined in errno.h, but always
-  // implicitly written to by POSIX syscalls)
-  perror(msg);
-
-  exit(EXIT_FAILURE);
-}
-
-void disable_raw_mode(void) { /* {{{ */
-  // if termios is not restored, user must manually call `reset` on exit
-
+// restore the initial state of termios on exit. this prevents the user from
+// needing to manually call `reset` on exit
+//
+// because this function is called by atexit, it cannot accept any args.
+void disable_raw_mode(void) {
   // TCSAFLUSH ensures the rest of the (unread) chars are not sent back to the
   // parent process
   // https://www.gnu.org/software/libc/manual/html_node/Mode-Functions.html#index-TCSAFLUSH
-  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &EDITOR.termios_mode) == -1) {
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &SCREEN.termios_mode) == -1) {
     panic("tcsetattr");
   };
-} /* }}} */
+}
 
-void enable_raw_mode(struct EDITOR* e) { /* {{{ */
+void enable_raw_mode(struct SCREEN* s) { /* {{{ */
   // fails if stdin is passed to the program, or if a file descriptor is passed
-  // (./main <file)
-  if (tcgetattr(STDIN_FILENO, &e->termios_mode) == -1) {
+  // (./main <main.c)
+  if (tcgetattr(STDIN_FILENO, &s->termios_mode) == -1) {
     panic("tcgetattr");
   };
   atexit(disable_raw_mode);  // defer-ish
 
-  struct termios raw = e->termios_mode;  // assignment without ptr = copy
+  struct termios raw = s->termios_mode;  // assignment without ptr = copy
 
   // note: terminal bindings still intercept stdin
 
@@ -131,26 +129,30 @@ void enable_raw_mode(struct EDITOR* e) { /* {{{ */
 
 } /* }}} */
 
-void set_window_dimensions(struct EDITOR* e) {
-  // struct winsize ws;
-  // if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != -1 && ws.ws_col > 0) {
-  //   e->rows = ws.ws_row;
-  //   e->columns = ws.ws_col;
-  //   return;
-  // }
+void set_dimensions(struct SCREEN* s) { /* {{{ */
+  struct winsize ws;
+  // note: TIOCGWINSZ is indirectly included via asm/termbits.h
+  // https://man.archlinux.org/man/core/man-pages/TIOCGWINSZ.2const.en
+  // https://stackoverflow.com/q/67098208
+  if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != -1 && ws.ws_col > 0) {
+    s->rows = ws.ws_row;
+    s->columns = ws.ws_col;
+    return;
+  }
 
   // fallback: determine cursor position manually
 
   // unlike H, C+B ensures cursor remains within the bounds
   if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) {
-    panic("write");
+    panic("write (move cursor)");
   };
 
   if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) {
-    panic("write");
+    panic("write (query cursor position)");
   };
 
-  char buf[32];
+  const int bufsize = 32;
+  char buf[bufsize];
   for (unsigned int i = 0; i < sizeof(buf); i++) {
     // raw output: ^[[43;170R
     if (read(STDOUT_FILENO, &buf[i], 1) != 1 || buf[i] == 'R') {
@@ -165,7 +167,7 @@ void set_window_dimensions(struct EDITOR* e) {
 
   // indexing a string with &s[n] (located at mem addr x) retrieves the
   // substring starting at mem addr x+n, and ending at the null byte.
-  if (sscanf(&buf[2], "%d;%d", &(e->rows), &(e->columns)) == -1) {
-    panic("sscanf");
+  if (sscanf(&buf[2], "%d;%d", &(s->rows), &(s->columns)) == -1) {
+    panic("sscanf cursor position");
   };
-}
+} /* }}} */
