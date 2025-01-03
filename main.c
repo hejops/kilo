@@ -1,19 +1,20 @@
 #include <stdlib.h>
 
-#include "key.c"
-#include "screen.c"
+#include "key.h"
+#include "screen.h"
 
 // https://viewsourcecode.org/snaptoken/kilo
+
+// similar to pyright, clangd has no concept of workspace. files must be opened
+// before they can be scanned.
 
 // functions must be declared/included before they can be used
 int main(void) {
   // init
+
   enable_raw_mode(&SCREEN);
   set_dimensions(&SCREEN);
   clear_screen(&SCREEN);
-
-  // draw_rows(SCREEN.rows);
-  // write(STDOUT_FILENO, "\x1b[H", 3);  // move cursor back to home
 
   while (1) {
     char key = read_key();

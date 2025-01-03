@@ -1,5 +1,3 @@
-#pragma once
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +15,7 @@ struct STRING_BUFFER buf_new(void) {
   return buf;
 }
 
-// if b has not been initialised, this function segfaults.
+// if buf has not been initialised, this function segfaults.
 void buf_append(struct STRING_BUFFER* buf, const char* str, int len) {
   // realloc may or may not move the existing ptr
   char* new_addr = realloc(buf->contents, (unsigned)(buf->length + len));
@@ -33,8 +31,8 @@ void buf_append(struct STRING_BUFFER* buf, const char* str, int len) {
   buf->length += len;
 }
 
-void buf_write(struct STRING_BUFFER* buf) {
-  write(STDOUT_FILENO, buf->contents, (unsigned)buf->length);
+void buf_write(struct STRING_BUFFER buf) {
+  write(STDOUT_FILENO, buf.contents, (unsigned)buf.length);
 }
 
 void buf_free(struct STRING_BUFFER* buf) { free(buf->contents); }

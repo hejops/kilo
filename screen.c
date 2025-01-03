@@ -1,13 +1,11 @@
-#pragma once
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
-#include "buffer.c"
-#include "util.c"
+#include "buffer.h"
+#include "util.h"
 
 // for consistency, we only use the word 'screen', not 'window', or 'editor'.
 
@@ -25,14 +23,14 @@ struct SCREEN {  // struct declaration and initialisation
   int columns;
 } SCREEN;
 
-void draw_rows(int n, struct STRING_BUFFER* b) {
+void draw_rows(int n, struct STRING_BUFFER* buf) {
   for (int row = 0; row < n - 1; row++) {
-    buf_append(b, "~\r\n", 3);
+    buf_append(buf, "~\r\n", 3);
   }
-  buf_append(b, "~", 1);
+  buf_append(buf, "~", 1);
 }
 
-void clear_screen(struct SCREEN* s) {
+void clear_screen(struct SCREEN* scr) {
   struct STRING_BUFFER buf = {.contents = NULL, .length = 0};
 
   // // C always returns a copy, never a move
@@ -55,11 +53,11 @@ void clear_screen(struct SCREEN* s) {
   // https://vt100.net/docs/vt100-ug/chapter3.html#CUP
   buf_append(&buf, "\x1b[H", 3);
 
-  draw_rows(s->rows, &buf);
+  draw_rows(scr->rows, &buf);
 
   buf_append(&buf, "\x1b[H", 3);  // move cursor back to home
 
-  buf_write(&buf);
+  buf_write(buf);
   buf_free(&buf);
 }
 

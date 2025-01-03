@@ -1,11 +1,9 @@
-#pragma once
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "screen.c"
+#include "util.h"
 
 // switch/case only accepts compile-time constants, so macro is required
 // char mod_ctrl(char c) { return c & 0x1f; }
