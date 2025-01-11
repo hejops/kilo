@@ -18,12 +18,14 @@ struct SCREEN {
 
   int rows;
   int columns;
+  int cursor_row;
+  int cursor_col;
 };
 
 extern struct SCREEN SCREEN;
 
 void draw_rows(int n, struct STRING_BUFFER *buf);
-void clear_screen(struct SCREEN *scr);
 void disable_raw_mode(void);
-void enable_raw_mode(struct SCREEN *scr);
-void set_dimensions(struct SCREEN *scr);
+void scr_clear(struct SCREEN *scr);
+void scr_raw_mode(struct SCREEN *scr);
+void scr_set_dims(struct SCREEN *scr);

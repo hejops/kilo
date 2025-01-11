@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "screen.h"
 #include "util.h"
 
 // read a single key (byte) and return it
@@ -39,8 +40,23 @@ void handle_key(char key) {
   switch (key) {
       // c-q closes the window in my window manager
     case KEY_QUIT:
+      write(STDOUT_FILENO, "\x1b[2J", 4);
+      write(STDOUT_FILENO, "\x1b[H", 3);
       printf("exited\n");
       exit(EXIT_SUCCESS);
+      break;
+
+    case 'j':
+      SCREEN.cursor_row++;
+      break;
+    case 'k':
+      SCREEN.cursor_row--;
+      break;
+    case 'l':
+      SCREEN.cursor_row++;
+      break;
+    case 'h':
+      SCREEN.cursor_row--;
       break;
   };
 }

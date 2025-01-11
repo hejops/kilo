@@ -1,6 +1,5 @@
+#include <string.h>
 // for consistency, we only use the word 'screen', not 'window', or 'editor'.
-
-#include "screen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,46 +7,22 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "screen.h"
 #include "util.h"
 
 struct SCREEN SCREEN;  // init global var. the header must re-export this.
 
 void draw_rows(int n, struct STRING_BUFFER* buf) {
   for (int row = 0; row < n - 1; row++) {
-    buf_append(buf, "~\r\n", 3);
+    // buf_append(buf, "~\r\n", 3);
+    buf_append(buf, "~", 1);
+    buf_append(buf, "\x1b[K", 3);  // clear line (to the right)
+    buf_append(buf, "\r\n", 2);
   }
-  buf_append(buf, "~", 1);
-}
 
-void clear_screen(struct SCREEN* scr) {
-  struct STRING_BUFFER buf = {.contents = NULL, .length = 0};
-
-  // // C always returns a copy, never a move
-  // struct STRING_BUFFER buf = buf_new();
-  // printf("%p ", &buf);
-
-  // note: there is no way to check whether a var has been initialised (without
-  // segfaulting)
-  // https://stackoverflow.com/a/36490974
-
-  // \x1b = 27 = Esc
-
-  // [2J = erase all lines
-  // https://vt100.net/docs/vt100-ug/chapter3.html#ED
-  // if n < len(string), probably UB
-  buf_append(&buf, "\x1b[2J", 4);
-
-  // [row;colH = place cursor at row,col
-  // with no args, row=col=1 (1-indexed)
-  // https://vt100.net/docs/vt100-ug/chapter3.html#CUP
-  buf_append(&buf, "\x1b[H", 3);
-
-  draw_rows(scr->rows, &buf);
-
-  buf_append(&buf, "\x1b[H", 3);  // move cursor back to home
-
-  buf_write(buf);
-  buf_free(&buf);
+  char footer[20];
+  int footer_len = snprintf(footer, sizeof(footer), "kilo v%s", KILO_VERSION);
+  buf_append(buf, footer, footer_len);
 }
 
 // restore the initial state of termios on exit. this prevents the user from
@@ -63,7 +38,50 @@ void disable_raw_mode(void) {
   };
 }
 
-void enable_raw_mode(struct SCREEN* scr) { /* {{{ */
+void scr_clear(struct SCREEN* scr) {
+  struct STRING_BUFFER buf = {.contents = NULL, .length = 0};
+
+  // // C always returns a copy, never a move
+  // struct STRING_BUFFER buf = buf_new();
+  // printf("%p ", &buf);
+
+  // note: there is no way to check whether a var has been initialised (without
+  // segfaulting)
+  // https://stackoverflow.com/a/36490974
+
+  // \x1b = 27 = Esc
+
+  // hide cursor (not sure what this does)
+  buf_append(&buf, "\x1b[?25l", 6);
+
+  // [2J = erase all lines
+  // https://vt100.net/docs/vt100-ug/chapter3.html#ED
+  // if n < len(string), probably UB
+  // buf_append(&buf, "\x1b[2J", 4);
+
+  // [row;colH = place cursor at row,col
+  // with no args, row=col=1 (1-indexed)
+  // https://vt100.net/docs/vt100-ug/chapter3.html#CUP
+  buf_append(&buf, "\x1b[H", 3);
+
+  draw_rows(scr->rows, &buf);
+
+  // buf_append(&buf, "\x1b[H", 3);  // move cursor back to home (0,0)
+
+  char cursor_pos[40];
+  snprintf(cursor_pos, sizeof(cursor_pos), "\x1b[%d;%dH",
+           SCREEN.cursor_row + 1,  // must be 1-indexed
+           SCREEN.cursor_col + 1);
+  buf_append(&buf, cursor_pos, (int)strlen(cursor_pos));
+
+  // show cursor
+  buf_append(&buf, "\x1b[?25h", 6);
+
+  buf_write(buf);
+  buf_free(&buf);
+}
+
+void scr_raw_mode(struct SCREEN* scr) { /* {{{ */
   // fails if stdin is passed to the program, or if a file descriptor is passed
   // (./main <main.c)
   if (tcgetattr(STDIN_FILENO, &scr->termios_mode) == -1) {
@@ -133,7 +151,7 @@ void enable_raw_mode(struct SCREEN* scr) { /* {{{ */
 
 } /* }}} */
 
-void set_dimensions(struct SCREEN* scr) { /* {{{ */
+void scr_set_dims(struct SCREEN* scr) { /* {{{ */
   struct winsize wsz;
   // note: TIOCGWINSZ is indirectly included via asm/termbits.h
   // https://man.archlinux.org/man/core/man-pages/TIOCGWINSZ.2const.en

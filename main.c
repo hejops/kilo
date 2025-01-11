@@ -30,13 +30,16 @@
 int main(void) {
   // init
 
-  enable_raw_mode(&SCREEN);
-  set_dimensions(&SCREEN);
-  clear_screen(&SCREEN);
+  scr_raw_mode(&SCREEN);
+  SCREEN.cursor_row = 0;
+  SCREEN.cursor_col = 0;
+  scr_set_dims(&SCREEN);
+  scr_clear(&SCREEN);
 
   while (1) {
     char key = read_key();
     handle_key(key);
+    scr_clear(&SCREEN);
   };
 
   // clear_screen(&SCREEN);
