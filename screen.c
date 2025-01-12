@@ -1,6 +1,7 @@
 // for consistency, we only use the word 'screen', not 'window', or 'editor'.
 #include "screen.h"
 
+#include <asm-generic/ioctls.h>  // note: TIOCGWINSZ may be implicitly included via asm/termbits.h or asm-generic/ioctls.h
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -153,7 +154,6 @@ void scr_raw_mode(struct SCREEN* scr) { /* {{{ */
 
 void scr_set_dims(struct SCREEN* scr) { /* {{{ */
   struct winsize wsz;
-  // note: TIOCGWINSZ is indirectly included via asm/termbits.h
   // https://man.archlinux.org/man/core/man-pages/TIOCGWINSZ.2const.en
   // https://stackoverflow.com/q/67098208
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &wsz) != -1 && wsz.ws_col > 0) {
