@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 
 #include "key.h"
@@ -40,7 +41,7 @@ int main(void) {
     char key = read_key();
     handle_key(key);
     scr_clear(&SCREEN);
-  };
+  }
 
   // clear_screen(&SCREEN);
   return EXIT_SUCCESS;

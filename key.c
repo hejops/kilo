@@ -21,7 +21,7 @@ char read_key(void) { /* {{{ */
       // && errno != EAGAIN
   ) {
     panic("read");
-  };
+  }
 
   if (DEBUG) {
     if (iscntrl(key)) {
@@ -38,13 +38,15 @@ char read_key(void) { /* {{{ */
 
 void handle_key(char key) {
   switch (key) {
+    default:  // should be declared first, apparently
+      break;
+
       // c-q closes the window in my window manager
     case KEY_QUIT:
       write(STDOUT_FILENO, "\x1b[2J", 4);
       write(STDOUT_FILENO, "\x1b[H", 3);
       printf("exited\n");
       exit(EXIT_SUCCESS);
-      break;
 
     case 'j':
       SCREEN.cursor_row++;
@@ -58,5 +60,5 @@ void handle_key(char key) {
     case 'h':
       SCREEN.cursor_row--;
       break;
-  };
+  }
 }

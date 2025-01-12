@@ -1,13 +1,13 @@
-#include <string.h>
 // for consistency, we only use the word 'screen', not 'window', or 'editor'.
+#include "screen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
-#include "screen.h"
 #include "util.h"
 
 struct SCREEN SCREEN;  // init global var. the header must re-export this.
@@ -35,7 +35,7 @@ void disable_raw_mode(void) {
   // https://www.gnu.org/software/libc/manual/html_node/Mode-Functions.html#index-TCSAFLUSH
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &SCREEN.termios_mode) == -1) {
     panic("tcsetattr");
-  };
+  }
 }
 
 void scr_clear(struct SCREEN* scr) {
@@ -86,7 +86,7 @@ void scr_raw_mode(struct SCREEN* scr) { /* {{{ */
   // (./main <main.c)
   if (tcgetattr(STDIN_FILENO, &scr->termios_mode) == -1) {
     panic("tcgetattr");
-  };
+  }
   atexit(disable_raw_mode);  // defer-ish
 
   struct termios raw = scr->termios_mode;  // assignment without ptr = copy
@@ -147,7 +147,7 @@ void scr_raw_mode(struct SCREEN* scr) { /* {{{ */
 
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
     panic("tcsetattr");
-  };
+  }
 
 } /* }}} */
 
@@ -167,14 +167,14 @@ void scr_set_dims(struct SCREEN* scr) { /* {{{ */
   // unlike H, C+B ensures cursor remains within the bounds
   if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) {
     panic("write (move cursor)");
-  };
+  }
 
   if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) {
     panic("write (query cursor position)");
-  };
+  }
 
-  const int bufsize = 32;
-  char buf[bufsize];
+  // const int bufsize = 32;
+  char buf[32];
   for (unsigned int i = 0; i < sizeof(buf); i++) {
     // raw output: ^[[43;170R
     if (read(STDOUT_FILENO, &buf[i], 1) != 1 || buf[i] == 'R') {
@@ -191,5 +191,5 @@ void scr_set_dims(struct SCREEN* scr) { /* {{{ */
   // substring starting at mem addr x+n, and ending at the null byte.
   if (sscanf(&buf[2], "%d;%d", &(scr->rows), &(scr->columns)) == -1) {
     panic("sscanf cursor position");
-  };
+  }
 } /* }}} */
