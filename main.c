@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <stdnoreturn.h>
 
 #include "key.h"
 #include "screen.h"
@@ -27,7 +28,7 @@
 // https://websites.umich.edu/~eecs381/handouts/CHeaderFileGuidelines.pdf
 // https://softwareengineering.stackexchange.com/a/167751
 
-// functions must be declared/included before they can be used
+// functions must be declared/included before they can be referenced
 int main(void) {
   // init
 
@@ -38,7 +39,7 @@ int main(void) {
   scr_clear(&SCREEN);
 
   while (1) {
-    char key = read_key();
+    int key = read_key();
     handle_key(key);
     scr_clear(&SCREEN);
   }

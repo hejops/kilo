@@ -11,5 +11,5 @@
 
 #define KEY_QUIT mod_ctrl('x')
 
-char read_key(void);
-void handle_key(char key);
+int read_key(void);
+void handle_key(int key);
